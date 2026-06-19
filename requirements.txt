@@ -1,0 +1,7 @@
+tensorflow==2.21.0
+numpy==2.3.0
+easyocr==1.7.2
+asyncpg==0.30.0
+pgvector>=0.3.0
+sentence-transformers>=3.0.0
+instructor
