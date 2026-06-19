@@ -1,0 +1,17 @@
+.env
+.DS_Store
+node_modules
+dist
+coverage
+*.log
+*.tmp
+.idea
+.vscode
+
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+data_preprocessing
