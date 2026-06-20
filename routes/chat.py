@@ -1,9 +1,12 @@
 import os
 import uuid
+import aiofiles
+from pathlib import Path
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from modules.data.sql_db import Database
 from modules.chat.llm import LLM
+from modules.chat.detect_chat_intention import final_chat_intention_predictor
 from modules.data.vect_db import VectorDB
 from helpers.vect_db_helpers import format_chunks_as_context
 from schemas.db_schemas import ChatSession, ChatMessage
@@ -138,19 +141,40 @@ async def send_message(request: SendMessageRequest):
     history = await db.get_last_n_messages(request.session_id, n=30)
     history_text = "\n".join(f"{m.role}: {m.content}" for m in history)
 
-    try:
-        vect_db = VectorDB(pool=db.pool)
-        context_chunks = await vect_db.search(query=request.content, user_id=request.user_id)
-        context = format_chunks_as_context(context_chunks) if context_chunks else None
-    except Exception:
-        context = None
-
+    # init LLM y prompt directory
     llm = _get_llm()
+    prompts_dir = Path(__file__).resolve().parent.parent / "modules" / "chat" / "prompts"
+
+    try:
+        async with aiofiles.open(prompts_dir / "main_prompt.txt", "r") as pf:
+            main_prompt = await pf.read()
+    except Exception:
+        main_prompt = None
+
+    # Detect chat intention
+    intention = final_chat_intention_predictor(llm, request.content)
+
+    context = None
+    if intention == "patient_information": # -> Si es una pregunta de informacion del paciente, se le pasa la informacion del paciente
+        try:
+            vect_db = VectorDB(pool=db.pool)
+            context_chunks = await vect_db.search(query=request.content, user_id=request.user_id)
+            context = format_chunks_as_context(context_chunks) if context_chunks else None
+        except Exception:
+            context = None
+    elif intention == "administrative_question": # -> Si es una pregunta administrativa, se le pasan las reglas del albergue
+        try:
+            async with aiofiles.open(prompts_dir / "reglas_albergue.txt", "r") as f:
+                context = await f.read()
+        except Exception:
+            context = None
+
     response_text = ""
     for chunk in llm.generate_response(
         question=request.content,
-        context=context,
-        aditional_prompt=f"historial de la conversación:\n{history_text}" if history_text else None,
+        prompt=main_prompt, # -> El prompt principal siempre sera el mismo, solo cambia el contexto dado (abajo)
+        context=context, # -> Contexto del paciente o albergue (puede ser none, asi que lo dejo asi noma)
+        conversation_history=history_text if history_text else None,
     ):
         if chunk:
             response_text += chunk

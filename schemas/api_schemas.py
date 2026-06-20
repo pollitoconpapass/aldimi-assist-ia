@@ -62,3 +62,8 @@ class ChatSessionResponse(BaseModel):
     title: Optional[str] = None
     created_at: datetime
     message_count: int = 0
+
+class ChatIntention(BaseModel):
+    normal_conversation: bool = False
+    patient_information: bool = False
+    administrative_question: bool = False
