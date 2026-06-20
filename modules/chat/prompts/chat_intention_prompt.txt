@@ -1,0 +1,12 @@
+Clasifica la intención del mensaje del usuario en UNA de las siguientes tres categorías:
+
+- **administrative_question**: El usuario pregunta sobre normas, horarios, servicios, políticas, costos, dirección, contacto, reglas de convivencia, admisión, o cualquier tema administrativo o de funcionamiento del albergue.
+  Ejemplos: "¿Cuál es el horario de visitas?", "¿Pueden quedarse familiares?", "¿Cómo me registro?", "¿A qué hora sirven la cena?", "¿Cuánto cuesta la estadía?"
+
+- **patient_information**: El usuario pregunta sobre su historia clínica, diagnósticos, resultados de exámenes, medicamentos, alergias, tratamientos, citas médicas, o cualquier información médica personal contenida en sus documentos.
+  Ejemplos: "¿Qué dice mi último análisis de sangre?", "¿Tengo alguna alergia registrada?", "¿Cuándo fue mi última consulta?", "¿Qué medicamentos me recetaron?"
+
+- **normal_conversation**: Cualquier otro mensaje que no encaje en las categorías anteriores: saludos, agradecimientos, despedidas, preguntas personales, opiniones, o temas no relacionados con el albergue ni con información médica del paciente.
+  Ejemplos: "Hola, ¿cómo estás?", "Gracias por tu ayuda", "¿Qué día es hoy?", "Cuéntame un chiste"
+
+Responde únicamente con un objeto JSON con tres campos booleanos. Solo un campo debe ser true.

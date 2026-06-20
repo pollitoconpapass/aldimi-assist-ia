@@ -12,9 +12,8 @@ class LLM:
         self.model_name = "openai/gpt-oss-20b"
 
 
-    def generate_response(self, question: str, context: str = None, additional_prompt: str = None):
-        system_prompt = additional_prompt if additional_prompt else self.prompt
-        full_system = system_prompt + (f"\n\nContexto:\n{context}" if context else "")
+    def generate_response(self, question: str, prompt: str = None, context: str = None, conversation_history: str = None):
+        full_system = prompt + (f"\n\nContexto médico del paciente:\n{context}" if context else "") + (f"\n\nHistorial de conversación:\n{conversation_history}" if conversation_history else "")
 
         response = self.client.chat.completions.create(
             model=self.model_name,
