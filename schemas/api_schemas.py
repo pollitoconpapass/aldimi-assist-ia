@@ -29,12 +29,17 @@ class OCRRequest(BaseModel):
 class DocumentTypeRequest(BaseModel):
     text: str
 
+class FormatTextRequest(BaseModel):
+    ocr_text: str
+    document_type: str
 
 class SaveDocumentRequest(BaseModel):
     user_id: str
     document_type: str  # 'dni' | 'medical_report'
     file_path: str
     ocr_text: str
+    dni_data: Optional[dict] = None
+    medical_report_data: Optional[dict] = None
 
 
 class CreateSessionRequest(BaseModel):
