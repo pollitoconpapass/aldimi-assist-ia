@@ -4,7 +4,8 @@ from typing import Optional, List, Dict
 
 
 class User(BaseModel):
-    id: str # -> id es el dni
+    id: str # -> UUID
+    dni: str # -> id es el dni
     email: str
     password_hash: str
     firstname: str

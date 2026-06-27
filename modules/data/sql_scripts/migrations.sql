@@ -1,0 +1,4 @@
+-- ALTERATIONS TO THE DATABASE SCHEMA
+
+-- Add a new column (DNI) to the users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dni VARCHAR(8) NOT NULL UNIQUE;

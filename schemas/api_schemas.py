@@ -5,7 +5,7 @@ from fastapi import UploadFile, File
 
 
 class SignupRequest(BaseModel):
-    id: str # -> id es el dni
+    dni: str
     email: str
     password: str
     firstname: str
