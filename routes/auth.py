@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, HTTPException
 from schemas.db_schemas import User
 from schemas.api_schemas import SignupRequest, LogInRequest
@@ -9,29 +10,37 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/signup")
 async def signup(request:SignupRequest) -> User:
-    db = Database()
-    await db.connect()
+    try: 
+        db = Database()
+        await db.connect()
 
-    exists = await db.get_user(request.id)
-    if exists:
-        raise HTTPException(status_code=400, detail="User already exists")
-    
-    user = User(
-        id=request.id,
-        email=request.email,
-        password_hash=hash_password(request.password),
-        firstname=request.firstname,
-        lastname=request.lastname,
-        birthdate=request.birthdate,
-        gender=request.gender,
-        address=request.address,
-        phone=request.phone,
-        role=request.role,
-        created_at=datetime.now()
-    )
+        exists = await db.get_user_by_dni(request.dni)
+        if exists:
+            raise HTTPException(status_code=400, detail="User already exists")
+        
+        user = User(
+            id=str(uuid.uuid4()),
+            dni=request.dni,
+            email=request.email,
+            password_hash=hash_password(request.password),
+            firstname=request.firstname,
+            lastname=request.lastname,
+            birthdate=request.birthdate,
+            gender=request.gender,
+            address=request.address,
+            phone=request.phone,
+            role=request.role,
+            created_at=datetime.now()
+        )
 
-    await db.create_user(user)
-    return user
+        await db.create_user(user)
+        
+        print("Usuario registrado exitosamente!")
+        return { "id": user.id, "status_code": 201}
+    except Exception as e:
+        print("Error al registrar el usuario: ", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/login")
 async def login(request: LogInRequest) -> User:

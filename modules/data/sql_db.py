@@ -1,4 +1,5 @@
 import os
+import uuid
 import asyncpg
 from typing import Optional, List
 from datetime import datetime
@@ -44,22 +45,26 @@ class Database:
     # === USERS ===
     async def create_user(self, user: User) -> User:
         row = await self._fetchrow(
-            """INSERT INTO users (id, email, password_hash, firstname, lastname,
+            """INSERT INTO users (id, dni, email, password_hash, firstname, lastname,
                                   birthdate, gender, address, phone, role, created_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                RETURNING *""",
-            user.id, user.email, user.password_hash, user.firstname, user.lastname,
+            user.id, user.dni, user.email, user.password_hash, user.firstname, user.lastname,
             user.birthdate, user.gender, user.address, user.phone, user.role, user.created_at,
         )
-        return User(**dict(row))
+        return User(**{k: str(v) if isinstance(v, uuid.UUID) else v for k, v in dict(row).items()})
 
     async def get_user(self, user_id: str) -> Optional[User]:
         row = await self._fetchrow("SELECT * FROM users WHERE id = $1", user_id)
-        return User(**dict(row)) if row else None
+        return User(**{k: str(v) if isinstance(v, uuid.UUID) else v for k, v in dict(row).items()}) if row else None
+
+    async def get_user_by_dni(self, dni: str) -> Optional[User]:
+        row = await self._fetchrow("SELECT * FROM users WHERE dni = $1", dni)
+        return User(**{k: str(v) if isinstance(v, uuid.UUID) else v for k, v in dict(row).items()}) if row else None
 
     async def get_user_by_email(self, email: str) -> Optional[User]:
         row = await self._fetchrow("SELECT * FROM users WHERE email = $1", email)
-        return User(**dict(row)) if row else None
+        return User(**{k: str(v) if isinstance(v, uuid.UUID) else v for k, v in dict(row).items()}) if row else None
 
     async def update_user(self, user_id: str, **updates) -> Optional[User]:
         allowed = {"email", "password_hash", "firstname", "lastname",
