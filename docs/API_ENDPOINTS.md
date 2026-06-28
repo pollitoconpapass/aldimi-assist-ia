@@ -218,6 +218,41 @@ Base URL:
 }
 ```
 
+### GET /api/users/{user_id}/documents
+
+- Description: Retrieves all documents associated with a user, including DNI and medical reports.
+- Request body: None.
+- Success response: `200 OK`
+- Response body: Array of document records.
+
+### GET /api/users/{user_id}/documents/{doc_type}
+
+- Description: Retrieves all documents of a specific type for a user.
+- Request body: None.
+- Success response: `200 OK`
+- Response body: Array of documents filtered by type.
+
+### GET /api/users/{user_id}/medical_reports
+
+- Description: Retrieves all medical reports associated with a user.
+- Request body: None.
+- Success response: `200 OK`
+- Response body: Array of medical report records.
+
+### GET /api/users/{user_id}/medical_reports/{report_id}
+
+- Description: Retrieves a specific medical report by its ID.
+- Request body: None.
+- Success response: `200 OK`
+- Response body: A single medical report object.
+
+### GET /api/users/{user_id}/dni
+
+- Description: Retrieves the DNI associated with a user.
+- Request body: None.
+- Success response: `200 OK`
+- Response body: A single DNI record.
+
 ---
 
 ## Vision / Document Processing
