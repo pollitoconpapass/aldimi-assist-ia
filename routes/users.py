@@ -44,3 +44,44 @@ async def delete_user(user_id: str):
     await db.connect()
     deleted = await db.delete_user(user_id)
     return {"deleted": deleted}
+
+# === DOCUMENT RELATED (no se si esto es 100% necesario pero lo dejo ahi por si las moscas) ===
+@router.get("/{user_id}/documents") # -> get all documents from a user (include DNI or medical reports)
+async def get_documents(user_id: str):
+    db = Database()
+    await db.connect()
+    documents = await db.get_documents_by_user(user_id)
+    return documents
+
+@router.get("/{user_id}/documents/{doc_type}") # -> get documents from a user by type
+async def get_documents_by_type(user_id: str, doc_type: str):
+    db = Database()
+    await db.connect()
+    documents = await db.get_documents_by_type(user_id, doc_type)
+    return documents
+
+
+# === MEDICAL REPORTS ===
+@router.get("/{user_id}/medical_reports") # -> get all medical reports from a user
+async def get_medical_reports_by_user(user_id: str):
+    db = Database()
+    await db.connect()
+    documents = await db.get_reports_by_user(user_id)
+    return documents
+
+@router.get("/{user_id}/medical_reports/{report_id}") # -> get specific medical report from a user
+async def get_medical_report(report_id: str):
+    db = Database()
+    await db.connect()
+    document = await db.get_medical_report(report_id)
+    return document
+
+
+# === DNI ===
+@router.get("/{user_id}/dni") # -> get DNI from a user
+async def get_dni_by_user(user_id: str):
+    db = Database()
+    await db.connect()
+    document = await db.get_dni_by_user(user_id)
+    return document
+
