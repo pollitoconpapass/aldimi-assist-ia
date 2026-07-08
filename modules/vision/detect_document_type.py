@@ -28,5 +28,5 @@ def predict_document_type(sentence: str):
     padded_sequence = pad_sequences(sequence, max_len)
     prediction_prob = model.predict(padded_sequence, verbose=0)[0][0]
     
-    doc_type = "reporte_medico" if prediction_prob >= 0.5 else "dni"
+    doc_type = "medical_report" if prediction_prob >= 0.5 else "dni"
     return doc_type

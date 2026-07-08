@@ -1,3 +1,7 @@
+import ast
+import json
+import re
+
 from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Any, Optional, List, Dict
@@ -19,12 +23,17 @@ class User(BaseModel):
 
 
 class Document(BaseModel):
-    id: str
-    user_id: str
+    id: Any
+    user_id: Any
     type: str  # 'dni' | 'medical_report'
     file_path: str
     ocr_text: Optional[str] = None
     uploaded_at: datetime
+
+    @field_validator('id', 'user_id', mode='before')
+    @classmethod
+    def convert_to_str(cls, v):
+        return str(v) if v is not None else v
 
 
 class DNI(BaseModel):
@@ -38,12 +47,45 @@ class DNI(BaseModel):
 
 
 class MedicalReport(BaseModel):
-    id: str
-    document_id: str
-    report_date: datetime
+    id: Any
+    document_id: Any
+    report_date: str
     condition: str
     results: Optional[str] = None
     medications: Optional[List[Dict]] = None
+
+    @field_validator('id', 'document_id', mode='before')
+    @classmethod
+    def convert_to_str(cls, v):
+        return str(v) if v is not None else v
+
+    @field_validator('report_date', mode='before')
+    @classmethod
+    def convert_date_to_str(cls, v):
+        if hasattr(v, 'isoformat'):
+            return v.isoformat()
+        return str(v) if v is not None else v
+
+    @field_validator('medications', mode='before')
+    @classmethod
+    def parse_medications(cls, v):
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                pass
+            try:
+                return ast.literal_eval(v)
+            except (ValueError, SyntaxError):
+                pass
+            quoted = re.sub(r'([{,]\s*)(\w+)\s*:', r'\1"\2":', v)
+            try:
+                return json.loads(quoted)
+            except json.JSONDecodeError:
+                return v
+        return v
 
 
 class DoctorPatient(BaseModel):

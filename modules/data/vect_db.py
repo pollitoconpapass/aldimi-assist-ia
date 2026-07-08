@@ -45,7 +45,7 @@ class VectorDB:
         embeddings = self.embedder.encode_batch(chunks)
 
         async with self.pool.acquire() as conn:
-            await pgvector.register_type(conn)
+            await pgvector.register_vector(conn)
             for i, (text, emb) in enumerate(zip(chunks, embeddings)):
                 await conn.execute(
                     """INSERT INTO document_chunks (document_id, chunk_index, chunk_text, embedding)
@@ -73,7 +73,7 @@ class VectorDB:
         query_emb = self.embedder.encode(query)
 
         async with self.pool.acquire() as conn:
-            await pgvector.register_type(conn)
+            await pgvector.register_vector(conn)
             rows = await conn.fetch(
                 """SELECT dc.chunk_text, dc.chunk_index, dc.document_id,
                           doc.type AS document_type,
@@ -103,7 +103,7 @@ class VectorDB:
         query_emb = self.embedder.encode(query)
 
         async with self.pool.acquire() as conn:
-            await pgvector.register_type(conn)
+            await pgvector.register_vector(conn)
             rows = await conn.fetch(
                 """SELECT dc.chunk_text, dc.chunk_index, dc.document_id,
                           doc.type AS document_type, doc.user_id AS patient_id,
@@ -135,7 +135,7 @@ class VectorDB:
         query_emb = self.embedder.encode(query)
 
         async with self.pool.acquire() as conn:
-            await pgvector.register_type(conn)
+            await pgvector.register_vector(conn)
 
             if doctor_id:
                 rows = await conn.fetch(
