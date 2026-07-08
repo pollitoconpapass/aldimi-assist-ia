@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel
-from typing import Optional, List
-from fastapi import UploadFile, File
+from typing import Optional
+
 
 
 class SignupRequest(BaseModel):
@@ -20,10 +20,6 @@ class LogInRequest(BaseModel):
     email: str
     password: str
 
-
-class OCRRequest(BaseModel):
-    file: UploadFile = File(...)
-    mode: str # -> default | custom
 
 
 class DocumentTypeRequest(BaseModel):

@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import asyncpg
 from typing import Optional, List
 from datetime import datetime
@@ -158,12 +159,14 @@ class Database:
 
     # === MEDICAL REPORTS ===
     async def create_medical_report(self, report: MedicalReport) -> MedicalReport:
-        medications_json = report.medications if report.medications else []
+        report_date = datetime.strptime(report.report_date, "%Y-%m-%d").date() if isinstance(report.report_date, str) else report.report_date
+        medications_json = json.dumps(report.medications) if report.medications else "[]"
+        
         row = await self._fetchrow(
             """INSERT INTO medical_reports (id, document_id, report_date, condition,
                                             results, medications)
                VALUES ($1, $2, $3, $4, $5, $6::jsonb) RETURNING *""",
-            report.id, report.document_id, report.report_date, report.condition,
+            report.id, report.document_id, report_date, report.condition,
             report.results, medications_json,
         )
         return MedicalReport(**dict(row))

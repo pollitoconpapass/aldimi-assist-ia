@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import easyocr
 from .detect_text_areas import extract_words_from_image
 
@@ -8,10 +9,12 @@ class OCRModule:
         self.reader = easyocr.Reader([self.language])
         self.mode = mode
 
-    def analyze_image_default(self, image_path: str):
-        image = cv2.imread(image_path)
+    async def analyze_image_default(self, file):
+        contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         results = self.reader.readtext(image)
-        return results
+        return " ".join([text for _, text, _ in results])
     
     def analyze_image_custom(self, image_path: str):
         words = extract_words_from_image(image_path)

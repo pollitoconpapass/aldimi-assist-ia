@@ -43,7 +43,7 @@ def predict_chat_intention(sentence) -> tuple[str, float]:
 
 def final_chat_intention_predictor(llm: LLM, sentence: str): # -> solo para cuando el confidence del modelo es bajo... (por si las moscas)
     decision, confidence = predict_chat_intention(sentence)
-    print(f"=== Confidence from the trained model: {confidence:.2f}% ===")
+    print(f"=== Result of the trained model: {decision} with {confidence:.2f}% of confidence ===")
 
     if confidence < 85.0:
         intention_prompt_path = _PROMPT_DIR / "chat_intention_prompt.txt"

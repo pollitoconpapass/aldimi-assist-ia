@@ -2,7 +2,7 @@ import os
 import uuid
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from modules.chat.llm import LLM
 from modules.data.sql_db import Database
@@ -10,15 +10,15 @@ from modules.data.vect_db import VectorDB
 from modules.vision.vision import OCRModule
 from modules.vision.detect_document_type import predict_document_type
 from schemas.db_schemas import DNI, Document, MedicalReport
-from schemas.api_schemas import DocumentTypeRequest, OCRRequest, SaveDocumentRequest, FormatTextRequest
+from schemas.api_schemas import DocumentTypeRequest, SaveDocumentRequest, FormatTextRequest
 
 router = APIRouter(prefix="/vision", tags=["vision"])
 
 @router.post("/ocr")
-async def ocr(request: OCRRequest):
-    ocr = OCRModule(request.mode)
-    filename = request.file.filename
-    text = ocr.analyze_image_default(filename)
+async def ocr(file: UploadFile = File(...), mode: str = Form(...)):
+    ocr = OCRModule(mode)
+    text = await ocr.analyze_image_default(file)
+    print(f"=== OCR Result: {text} ===")
     return text
     
 
@@ -52,7 +52,7 @@ async def format_text(request: FormatTextRequest):
             text=request.ocr_text,
             schema=MedicalReport,
             prompt="Extrae los datos del reporte médico desde el texto OCR. "
-                   "Debes extraer: report_date (fecha del reporte en ISO 8601), "
+                   "Debes extraer: report_date (fecha del reporte en formato YYYY-MM-DD), "
                    "condition (diagnóstico o condición médica), "
                    "results (resultados de exámenes, opcional) y "
                    "medications (lista de medicamentos con nombre y dosis, opcional)."
@@ -117,7 +117,7 @@ async def save_document(request: SaveDocumentRequest):
         result = {"document": document, "medical_report": report_record}
 
     # Vector DB indexing
-    vector_db = VectorDB()
+    vector_db = VectorDB(db.pool)
     await vector_db.index_document(doc_id, request.ocr_text)
 
     return result
