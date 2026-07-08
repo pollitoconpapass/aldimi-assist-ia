@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Any, Optional, List, Dict
 
 
 class User(BaseModel):
@@ -53,18 +53,28 @@ class DoctorPatient(BaseModel):
 
 
 class ChatSession(BaseModel):
-    id: str
-    user_id: str
+    id: Any
+    user_id: Any
     title: Optional[str] = None
     created_at: datetime
 
+    @field_validator('id', 'user_id', mode='before')
+    @classmethod
+    def convert_to_str(cls, v):
+        return str(v) if v is not None else v
+
 
 class ChatMessage(BaseModel):
-    id: str
-    session_id: str
+    id: Any
+    session_id: Any
     role: str  # 'user' | 'ai'
     content: str
     created_at: datetime
+
+    @field_validator('id', 'session_id', mode='before')
+    @classmethod
+    def convert_to_str(cls, v):
+        return str(v) if v is not None else v
 
 
 class Alert(BaseModel):
