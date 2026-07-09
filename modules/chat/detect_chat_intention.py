@@ -46,9 +46,12 @@ def final_chat_intention_predictor(llm: LLM, sentence: str): # -> solo para cuan
     print(f"=== Result of the trained model: {decision} with {confidence:.2f}% of confidence ===")
 
     if confidence < 85.0:
+        print("Using LLM to predict the intention...")
         intention_prompt_path = _PROMPT_DIR / "chat_intention_prompt.txt"
         prompt_text = intention_prompt_path.read_text(encoding="utf-8")
         decision = llm.extract_structured(sentence, ChatIntention, prompt=prompt_text)
+
+        print(f"=== Result of the LLM: {decision} ===")
 
         if decision.administrative_question:
             return "administrative_question"

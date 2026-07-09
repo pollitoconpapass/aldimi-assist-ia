@@ -156,11 +156,15 @@ async def send_message(request: SendMessageRequest):
 
     context = None
     if intention == "patient_information": # -> Si es una pregunta de informacion del paciente, se le pasa la informacion del paciente
+        print("Searching for patient information in the vector database...")
         try:
             vect_db = VectorDB(pool=db.pool)
             context_chunks = await vect_db.search(query=request.content, user_id=request.user_id)
+            print(f"Found {len(context_chunks)} context chunks:")
             context = format_chunks_as_context(context_chunks) if context_chunks else None
-        except Exception:
+            print("Context:", context)
+        except Exception as e:
+            print(f"Vector search error: {e}")
             context = None
     elif intention == "administrative_question": # -> Si es una pregunta administrativa, se le pasan las reglas del albergue
         try:
