@@ -116,8 +116,14 @@ async def save_document(request: SaveDocumentRequest):
         await db.create_medical_report(report_record)
         result = {"document": document, "medical_report": report_record}
 
-    # Vector DB indexing
-    vector_db = VectorDB(db.pool)
-    await vector_db.index_document(doc_id, request.ocr_text)
+        # Vector DB indexing
+        vector_db = VectorDB(db.pool)
+        text_to_index = f'''Fecha del reporte: {report_record.report_date}
+            Condición: {report_record.condition}
+            Resultados: {report_record.results or "N/A"}
+            Medicamentos: {"; ".join([f"{med.get('name', '')} ({med.get('dosage', '')})" for med in report_record.medications or []]) or "N/A"}
+
+        '''
+        await vector_db.index_document(doc_id, text_to_index)
 
     return result

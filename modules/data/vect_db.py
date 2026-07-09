@@ -69,7 +69,7 @@ class VectorDB:
         return await self.index_document(document_id, ocr_text)
 
     # When a user searches own documents
-    async def search(self, query: str, user_id: str, top_k: int = 5, min_score: float = 0.5,) -> list[dict]:
+    async def search(self, query: str, user_id: str, top_k: int = 5, min_score: float = 0.2) -> list[dict]:
         query_emb = self.embedder.encode(query)
 
         async with self.pool.acquire() as conn:
