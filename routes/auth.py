@@ -1,7 +1,7 @@
 import uuid
 from fastapi import APIRouter, HTTPException
 from schemas.db_schemas import User
-from schemas.api_schemas import SignupRequest, LogInRequest
+from schemas.api_schemas import SignupRequest, SignupResponse, LogInRequest
 from modules.data.sql_db import Database
 from helpers.auth_helpers import hash_password, verify_password
 from datetime import datetime
@@ -9,7 +9,7 @@ from datetime import datetime
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/signup")
-async def signup(request:SignupRequest) -> User:
+async def signup(request:SignupRequest) -> SignupResponse:
     try: 
         db = Database()
         await db.connect()
