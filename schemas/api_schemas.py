@@ -16,6 +16,10 @@ class SignupRequest(BaseModel):
     phone: Optional[str] = None
     role: str  # 'patient' | 'doctor'
 
+class SignupResponse(BaseModel):
+    id: str
+    status_code: int
+
 class LogInRequest(BaseModel):
     email: str
     password: str
