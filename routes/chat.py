@@ -20,6 +20,8 @@ from schemas.api_schemas import (
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 SESSION_NOT_FOUND_MESSAGE = "Session not found"
+NOT_AUTHORIZED_MESSAGE = "Not authorized for this session"
+MAIN_PROMPT_FILE_NAME = "main_prompt.txt"
 
 
 def _get_llm() -> LLM:
@@ -118,7 +120,8 @@ async def get_messages(session_id: str):
     ]
 
 
-@router.post("/messages", response_model=ChatMessageResponse) # -> Send message
+# === SEND MESSAGES ENDPOINTS ===
+@router.post("/messages", response_model=ChatMessageResponse) # -> Send message (patients)
 async def send_message(request: SendMessageRequest):
     db = Database()
     await db.connect()
@@ -127,7 +130,7 @@ async def send_message(request: SendMessageRequest):
     if not session:
         raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_MESSAGE)
     if session.user_id != request.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized for this session")
+        raise HTTPException(status_code=403, detail=NOT_AUTHORIZED_MESSAGE)
 
     user_message = ChatMessage(
         id=str(uuid.uuid4()),
@@ -146,7 +149,7 @@ async def send_message(request: SendMessageRequest):
     prompts_dir = Path(__file__).resolve().parent.parent / "modules" / "chat" / "prompts"
 
     try:
-        async with aiofiles.open(prompts_dir / "main_prompt.txt", "r") as pf:
+        async with aiofiles.open(prompts_dir / MAIN_PROMPT_FILE_NAME, "r") as pf:
             main_prompt = await pf.read()
     except Exception:
         main_prompt = None
@@ -178,6 +181,162 @@ async def send_message(request: SendMessageRequest):
         question=request.content,
         prompt=main_prompt, # -> El prompt principal siempre sera el mismo, solo cambia el contexto dado (abajo)
         context=context, # -> Contexto del paciente o albergue (puede ser none, asi que lo dejo asi noma)
+        conversation_history=history_text if history_text else None,
+    ):
+        if chunk:
+            response_text += chunk
+
+    ai_message = ChatMessage(
+        id=str(uuid.uuid4()),
+        session_id=request.session_id,
+        role="ai",
+        content=response_text,
+        created_at=datetime.now(),
+    )
+    await db.create_chat_message(ai_message)
+
+    return ChatMessageResponse(
+        id=ai_message.id,
+        session_id=ai_message.session_id,
+        role=ai_message.role,
+        content=ai_message.content,
+        created_at=ai_message.created_at,
+    )
+
+
+@router.post("/doctor/messages", response_model=ChatMessageResponse) # -> Send message (doctor - search by doctor)
+async def send_doctor_message(request: SendMessageRequest):
+    db = Database()
+    await db.connect()
+
+    session = await db.get_chat_session(request.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_MESSAGE)
+    if session.user_id != request.user_id:
+        raise HTTPException(status_code=403, detail=NOT_AUTHORIZED_MESSAGE)
+
+    user_message = ChatMessage(
+        id=str(uuid.uuid4()),
+        session_id=request.session_id,
+        role="user",
+        content=request.content,
+        created_at=datetime.now(),
+    )
+    await db.create_chat_message(user_message)
+
+    history = await db.get_last_n_messages(request.session_id, n=30)
+    history_text = "\n".join(f"{m.role}: {m.content}" for m in history)
+
+    llm = _get_llm()
+    prompts_dir = Path(__file__).resolve().parent.parent / "modules" / "chat" / "prompts"
+
+    try:
+        async with aiofiles.open(prompts_dir / MAIN_PROMPT_FILE_NAME, "r") as pf:
+            main_prompt = await pf.read()
+    except Exception:
+        main_prompt = None
+
+    intention = final_chat_intention_predictor(llm, request.content)
+
+    context = None
+    if intention == "patient_information":
+        print("Searching for patient information by doctor in the vector database...")
+        try:
+            vect_db = VectorDB(pool=db.pool)
+            context_chunks = await vect_db.search_by_doctor(query=request.content)
+            print(f"Found {len(context_chunks)} context chunks:")
+            context = format_chunks_as_context(context_chunks) if context_chunks else None
+            print("Context:", context)
+        except Exception as e:
+            print(f"Vector search error: {e}")
+            context = None
+    elif intention == "administrative_question":
+        try:
+            async with aiofiles.open(prompts_dir / "reglas_albergue.txt", "r") as f:
+                context = await f.read()
+        except Exception:
+            context = None
+
+    response_text = ""
+    for chunk in llm.generate_response(
+        question=request.content,
+        prompt=main_prompt,
+        context=context,
+        conversation_history=history_text if history_text else None,
+    ):
+        if chunk:
+            response_text += chunk
+
+    ai_message = ChatMessage(
+        id=str(uuid.uuid4()),
+        session_id=request.session_id,
+        role="ai",
+        content=response_text,
+        created_at=datetime.now(),
+    )
+    await db.create_chat_message(ai_message)
+
+    return ChatMessageResponse(
+        id=ai_message.id,
+        session_id=ai_message.session_id,
+        role=ai_message.role,
+        content=ai_message.content,
+        created_at=ai_message.created_at,
+    )
+
+
+@router.post("/doctor/messages/patient/{patient_id}", response_model=ChatMessageResponse) # -> Send message (doctor - specific patient)
+async def send_doctor_patient_message(request: SendMessageRequest, patient_id: str):
+    db = Database()
+    await db.connect()
+
+    session = await db.get_chat_session(request.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_MESSAGE)
+    if session.user_id != request.user_id:
+        raise HTTPException(status_code=403, detail=NOT_AUTHORIZED_MESSAGE)
+
+    user_message = ChatMessage(
+        id=str(uuid.uuid4()),
+        session_id=request.session_id,
+        role="user",
+        content=request.content,
+        created_at=datetime.now(),
+    )
+    await db.create_chat_message(user_message)
+
+    history = await db.get_last_n_messages(request.session_id, n=30)
+    history_text = "\n".join(f"{m.role}: {m.content}" for m in history)
+
+    llm = _get_llm()
+    prompts_dir = Path(__file__).resolve().parent.parent / "modules" / "chat" / "prompts"
+
+    try:
+        async with aiofiles.open(prompts_dir / MAIN_PROMPT_FILE_NAME, "r") as pf:
+            main_prompt = await pf.read()
+    except Exception:
+        main_prompt = None
+
+    context = None
+    print(f"Searching for patient {patient_id} information in the vector database...")
+    try:
+        vect_db = VectorDB(pool=db.pool)
+        context_chunks = await vect_db.search_by_patient(
+            query=request.content,
+            patient_id=patient_id,
+        )
+        print(f"Found {len(context_chunks)} context chunks:")
+        context = format_chunks_as_context(context_chunks) if context_chunks else None
+        print("Context:", context)
+    except Exception as e:
+        print(f"Vector search error: {e}")
+        context = None
+
+    response_text = ""
+    for chunk in llm.generate_response(
+        question=request.content,
+        prompt=main_prompt,
+        context=context,
         conversation_history=history_text if history_text else None,
     ):
         if chunk:

@@ -1,5 +1,4 @@
 import asyncpg
-from typing import Optional
 import pgvector.asyncpg as pgvector
 from helpers.vect_db_helpers import chunk_text
 from sentence_transformers import SentenceTransformer
@@ -98,8 +97,8 @@ class VectorDB:
             for r in rows
         ]
 
-    # When a doctor searches documents of all their patients. (query example: "¿Cuáles de mis pacientes han tenido resultados anormales en sus análisis de sangre?")
-    async def search_by_doctor(self, query: str, doctor_id: str, top_k: int = 5, min_score: float = 0.5,) -> list[dict]:
+    # When a doctor searches documents of all patients. (query example: "¿Cuáles de mis pacientes han tenido resultados anormales en sus análisis de sangre?")
+    async def search_by_doctor(self, query: str, top_k: int = 5, min_score: float = 0.2) -> list[dict]:
         query_emb = self.embedder.encode(query)
 
         async with self.pool.acquire() as conn:
@@ -110,12 +109,10 @@ class VectorDB:
                           1 - (dc.embedding <=> $1::vector) AS score
                    FROM document_chunks dc
                    JOIN documents doc ON doc.id = dc.document_id
-                   JOIN doctor_patient dp ON dp.patient_id = doc.user_id
-                   WHERE dp.doctor_id = $2
-                     AND 1 - (dc.embedding <=> $1::vector) >= $3
+                   WHERE 1 - (dc.embedding <=> $1::vector) >= $2
                    ORDER BY score DESC
-                   LIMIT $4""",
-                query_emb, doctor_id, min_score, top_k,
+                   LIMIT $3""",
+                query_emb, min_score, top_k,
             )
 
         return [
@@ -131,40 +128,23 @@ class VectorDB:
         ]
 
     # When we want to search for only one specific patient (query example: "¿Qué condicion tiene el paciente Juan Pérez?")
-    async def search_by_patient(self, query: str, patient_id: str, doctor_id: Optional[str] = None, top_k: int = 5, min_score: float = 0.5) -> list[dict]:
+    async def search_by_patient(self, query: str, patient_id: str, top_k: int = 5, min_score: float = 0.2) -> list[dict]:
         query_emb = self.embedder.encode(query)
 
         async with self.pool.acquire() as conn:
             await pgvector.register_vector(conn)
-
-            if doctor_id:
-                rows = await conn.fetch(
-                    """SELECT dc.chunk_text, dc.chunk_index, dc.document_id,
-                              doc.type AS document_type, doc.user_id AS patient_id,
-                              1 - (dc.embedding <=> $1::vector) AS score
-                       FROM document_chunks dc
-                       JOIN documents doc ON doc.id = dc.document_id
-                       JOIN doctor_patient dp ON dp.patient_id = doc.user_id
-                       WHERE doc.user_id = $2
-                         AND dp.doctor_id = $3
-                         AND 1 - (dc.embedding <=> $1::vector) >= $4
-                       ORDER BY score DESC
-                       LIMIT $5""",
-                    query_emb, patient_id, doctor_id, min_score, top_k,
-                )
-            else:
-                rows = await conn.fetch(
-                    """SELECT dc.chunk_text, dc.chunk_index, dc.document_id,
-                              doc.type AS document_type, doc.user_id AS patient_id,
-                              1 - (dc.embedding <=> $1::vector) AS score
-                       FROM document_chunks dc
-                       JOIN documents doc ON doc.id = dc.document_id
-                       WHERE doc.user_id = $2
-                         AND 1 - (dc.embedding <=> $1::vector) >= $3
-                       ORDER BY score DESC
-                       LIMIT $4""",
-                    query_emb, patient_id, min_score, top_k,
-                )
+            rows = await conn.fetch(
+                """SELECT dc.chunk_text, dc.chunk_index, dc.document_id,
+                          doc.type AS document_type, doc.user_id AS patient_id,
+                          1 - (dc.embedding <=> $1::vector) AS score
+                   FROM document_chunks dc
+                   JOIN documents doc ON doc.id = dc.document_id
+                   WHERE doc.user_id = $2
+                     AND 1 - (dc.embedding <=> $1::vector) >= $3
+                   ORDER BY score DESC
+                   LIMIT $4""",
+                query_emb, patient_id, min_score, top_k,
+            )
 
         return [
             {
