@@ -8,7 +8,7 @@ class LLM:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.client = Groq(api_key=self.api_key)
-        self.client_instructor = instructor.from_provider("groq/gpt-oss-20b", api_key=self.api_key)
+        self.client_instructor = instructor.from_groq(Groq(api_key=self.api_key), mode=instructor.Mode.JSON)
         self.model_name = "openai/gpt-oss-20b"
 
 
