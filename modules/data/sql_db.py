@@ -79,7 +79,7 @@ class Database:
             f"UPDATE users SET {set_clause} WHERE id = ${len(values)} RETURNING *",
             *values,
         )
-        return User(**dict(row)) if row else None
+        return User(**{k: str(v) if isinstance(v, uuid.UUID) else v for k, v in dict(row).items()}) if row else None
 
     async def delete_user(self, user_id: str) -> bool:
         result = await self._execute("DELETE FROM users WHERE id = $1", user_id)
@@ -87,7 +87,7 @@ class Database:
 
     async def list_users_by_role(self, role: str) -> List[User]:
         rows = await self._fetch("SELECT * FROM users WHERE role = $1 ORDER BY created_at DESC", role)
-        return [User(**dict(r)) for r in rows]
+        return [User(**{k: str(v) if isinstance(v, uuid.UUID) else v for k, v in dict(r).items()}) for r in rows]
     
 
     # === DOCUMENTS ===
@@ -212,7 +212,7 @@ class Database:
                WHERE dp.doctor_id = $1 ORDER BY u.lastname, u.firstname""",
             doctor_id,
         )
-        return [User(**dict(r)) for r in rows]
+        return [User(**{k: str(v) if isinstance(v, uuid.UUID) else v for k, v in dict(r).items()}) for r in rows]
 
     async def get_patient_doctors(self, patient_id: str) -> List[User]:
         rows = await self._fetch(
@@ -221,7 +221,7 @@ class Database:
                WHERE dp.patient_id = $1 ORDER BY u.lastname, u.firstname""",
             patient_id,
         )
-        return [User(**dict(r)) for r in rows]
+        return [User(**{k: str(v) if isinstance(v, uuid.UUID) else v for k, v in dict(r).items()}) for r in rows]
 
     async def is_patient_assigned(self, doctor_id: str, patient_id: str) -> bool:
         row = await self._fetchrow(
