@@ -36,7 +36,7 @@ async def signup(request:SignupRequest) -> SignupResponse:
         await db.create_user(user)
         
         print("Usuario registrado exitosamente!")
-        return { "id": user.id, "status_code": 201}
+        return { "id": user.id, "status_code": 200}
     except Exception as e:
         print("Error al registrar el usuario: ", e)
         raise HTTPException(status_code=500, detail=str(e))
