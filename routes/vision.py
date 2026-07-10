@@ -116,9 +116,14 @@ async def save_document(request: SaveDocumentRequest):
         await db.create_medical_report(report_record)
         result = {"document": document, "medical_report": report_record}
 
+        # We need to know who is the user in the medical report
+        user = await db.get_user(request.user_id)
+        patient_name = f"{user.firstname} {user.lastname}" if user else "Unknown Patient"
+
         # Vector DB indexing
         vector_db = VectorDB(db.pool)
-        text_to_index = f'''Fecha del reporte: {report_record.report_date}
+        text_to_index = f'''Paciente: {patient_name}  (id: {request.user_id})  
+            Fecha del reporte: {report_record.report_date}
             Condición: {report_record.condition}
             Resultados: {report_record.results or "N/A"}
             Medicamentos: {"; ".join([f"{med.get('name', '')} ({med.get('dosage', '')})" for med in report_record.medications or []]) or "N/A"}
