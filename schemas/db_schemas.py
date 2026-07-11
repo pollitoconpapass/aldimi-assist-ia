@@ -37,13 +37,18 @@ class Document(BaseModel):
 
 
 class DNI(BaseModel):
-    id: str
-    document_id: str
+    id: Any
+    document_id: Any
     names: str
     paternal_lastname: str
     maternal_lastname: str
     date_of_birth: datetime
     gender: str
+
+    @field_validator('id', 'document_id', mode='before')
+    @classmethod
+    def convert_to_str(cls, v):
+        return str(v) if v is not None else v
 
 
 class MedicalReport(BaseModel):
