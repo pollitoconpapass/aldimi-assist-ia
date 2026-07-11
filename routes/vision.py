@@ -1,6 +1,7 @@
 import os
 import uuid
 import asyncio
+import re
 from datetime import datetime
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
@@ -42,7 +43,7 @@ async def format_text(request: FormatTextRequest):
             text=request.ocr_text,
             schema=DNI,
             prompt="Extrae los datos del DNI peruano desde el texto OCR. "
-                   "Debes extraer: names (nombres), paternal_lastname (apellido paterno), "
+                   "Debes extraer: dni (número de DNI, como string), names (nombres), paternal_lastname (apellido paterno), "
                    "maternal_lastname (apellido materno), date_of_birth (fecha de nacimiento en ISO 8601) y gender (género)."
         )
 
@@ -74,9 +75,17 @@ async def save_document(request: SaveDocumentRequest):
     if request.document_type not in ("dni", "medical_report"):
         raise HTTPException(status_code=400, detail=f"Tipo de documento inválido: {request.document_type}")
 
+    user_id = request.user_id
+    is_uuid = re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', user_id)
+    if not is_uuid:
+        user = await db.get_user_by_dni(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail=f"No se encontró usuario con id o DNI: {user_id}")
+        user_id = user.id
+
     document = Document(
         id=doc_id,
-        user_id=request.user_id,
+        user_id=user_id,
         type=request.document_type,
         file_path=request.file_path,
         ocr_text=request.ocr_text,
@@ -117,12 +126,12 @@ async def save_document(request: SaveDocumentRequest):
         result = {"document": document, "medical_report": report_record}
 
         # We need to know who is the user in the medical report
-        user = await db.get_user(request.user_id)
+        user = await db.get_user(user_id)
         patient_name = f"{user.firstname} {user.lastname}" if user else "Unknown Patient"
 
         # Vector DB indexing
         vector_db = VectorDB(db.pool)
-        text_to_index = f'''Paciente: {patient_name}  (id: {request.user_id})  
+        text_to_index = f'''Paciente: {patient_name}  (id: {user_id})  
             Fecha del reporte: {report_record.report_date}
             Condición: {report_record.condition}
             Resultados: {report_record.results or "N/A"}
